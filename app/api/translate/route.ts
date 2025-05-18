@@ -35,17 +35,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing text or targetLang' }, { status: 400 });
     }
 
+    const normalizedTargetLang = targetLang.toLowerCase().split('-')[0];
+    if (!languageCodeToName[normalizedTargetLang]) {
+      console.error(`Unsupported target language: ${targetLang}. Supported are: ${Object.keys(languageCodeToName).join(', ')}`);
+      return NextResponse.json({ error: `Unsupported target language: ${targetLang}. Supported are: ${Object.keys(languageCodeToName).join(', ')}` }, { status: 400 });
+    }
+
     const mistralApiKey = process.env.MISTRAL_API_KEY;
     if (!mistralApiKey) {
       console.error('MISTRAL_API_KEY is not set');
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
 
-    const targetLanguageName = languageCodeToName[targetLang.toLowerCase().split('-')[0]] || targetLang;
-    const systemPrompt = `Translate the following text to ${targetLang}. Respond ONLY with the translated text. Do not include any additional explanations, introductions, or conversational remarks, regardless of the input text's nature.`;
+    const targetLanguageName = languageCodeToName[normalizedTargetLang] || targetLang;
+    const systemPrompt = `You are an expert medical translator. Translate the following text for medical and healthcare contexts to ${targetLanguageName}. Ensure accuracy with medical terminology. Respond ONLY with the translated text. Do not include any additional explanations, introductions, or conversational remarks.`;
     
     // Adjust model as needed - check Mistral documentation for latest/best models for translation
-    const model = 'mistral-small-latest'; // Or other suitable model like mistral-large-latest
+    const model = 'mistral-medium-latest'; // Or other suitable model like mistral-large-latest
 
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',

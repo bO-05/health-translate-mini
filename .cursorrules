@@ -15,15 +15,17 @@ coding_standards:
   - Tailwind utility classes; no separate CSS files.
   - All React components are functional; TypeScript strict mode on.
   - Optional Supabase: import from @supabase/ssr only.
+  - Follow healthcare data protection standards: no PII/PHI persistence without encryption.
+  - Implement proper error boundaries and fallbacks for critical medical contexts.
+  - Sanitize all user inputs and medical information from logs.
 
 folder_conventions:
   - `app/api/**/route.ts` for Edge handlers.
   - `components/XXX.tsx` for shared UI.
-  - `lib/**` for non-UI helpers.
-  - `apps/modal/*.py` each expose one `modal.Stub`.
-
 env_files:
   - .env.example -> include placeholders for all keys.
+    # MISTRAL_API_KEY=
+    # ELEVEN_API_KEY=
     # SUPABASE_URL=
     # SUPABASE_ANON_KEY=
 

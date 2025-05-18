@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import MicButton from "@/components/MicButton";
 import TranscriptPane from "@/components/TranscriptPane";
 import { ArrowRightLeft, Languages } from 'lucide-react';
@@ -15,6 +15,7 @@ export default function HomePage() {
   const [translationError, setTranslationError] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false); // Added for TTS
   const [ttsError, setTtsError] = useState<string | null>(null); // Added for TTS
+  const abortControllerRef = useRef<AbortController | null>(null); // For cancelling fetch
 
   const supportedLanguages = [
     { code: 'en-US', name: 'English (US)', mistralCode: 'en' },
@@ -55,6 +56,14 @@ export default function HomePage() {
       setTranslatedText("");
       return;
     }
+
+    // Cancel any ongoing translation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     setIsTranslating(true);
     setTranslationError(null);
     setTranslatedText("Translating...");
@@ -65,7 +74,15 @@ export default function HomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: sourceText, targetLang: targetLangCode, sourceLang: selectedSourceLang.split('-')[0] }),
+        signal: signal, // Pass the signal to fetch
       });
+
+      if (signal.aborted) {
+        console.log("Translation fetch aborted");
+        // Set a specific message or handle as needed
+        // setTranslatedText("Translation cancelled."); 
+        return; // Important to exit if aborted
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -74,12 +91,22 @@ export default function HomePage() {
       const data = await response.json();
       setTranslatedText(data.translatedText);
     } catch (error) {
-      console.error("Translation error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to translate.";
-      setTranslationError(`Error: ${errorMessage}`);
-      setTranslatedText("Translation failed.");
+      if ((error as Error).name === 'AbortError') {
+        console.log('Fetch aborted by user action.');
+        setTranslatedText("Translation cancelled."); // Or some other state
+      } else {
+        console.error("Translation error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to translate.";
+        setTranslationError(`Error: ${errorMessage}`);
+        setTranslatedText("Translation failed.");
+      }
+    } finally {
+      setIsTranslating(false);
+      if (abortControllerRef.current && signal === abortControllerRef.current.signal) {
+        // Clear the ref only if this is the controller that finished
+        abortControllerRef.current = null;
+      }
     }
-    setIsTranslating(false);
   };
 
   const handleSwapLanguages = () => {

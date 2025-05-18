@@ -49,8 +49,5 @@ yarn-error.log*
 .stylelintcache
 .prettiercache
 
-# PNPM
-pnpm-lock.yaml 
-
 .specstory/
 docs/

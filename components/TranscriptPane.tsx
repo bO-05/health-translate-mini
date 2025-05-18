@@ -1,6 +1,7 @@
 "use client";
 
 import { ClipboardCopy, Volume2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface TranscriptPaneProps {
   title: string;
@@ -12,14 +13,27 @@ interface TranscriptPaneProps {
 }
 
 export default function TranscriptPane({ title, text, error, isLoading, onSpeak, isSpeaking }: TranscriptPaneProps) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [copyMessage, setCopyMessage] = useState('');
+
   const handleCopy = () => {
+    if (!text) {
+      setCopyStatus('error');
+      setCopyMessage('Nothing to copy.');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+      return;
+    }
     navigator.clipboard.writeText(text)
       .then(() => {
-        // TODO: Show a temporary "Copied!" message
-        console.log("Text copied to clipboard");
+        setCopyStatus('success');
+        setCopyMessage('Copied!');
+        setTimeout(() => setCopyStatus('idle'), 2000);
       })
       .catch(err => {
         console.error("Failed to copy text: ", err);
+        setCopyStatus('error');
+        setCopyMessage('Failed to copy.');
+        setTimeout(() => setCopyStatus('idle'), 2000);
       });
   };
 
@@ -49,6 +63,14 @@ export default function TranscriptPane({ title, text, error, isLoading, onSpeak,
             <ClipboardCopy size={20} />
           </button>
         </div>
+        {copyStatus !== 'idle' && (
+          <div className={`absolute top-2 right-2 p-2 rounded-md text-sm
+            ${copyStatus === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100' : ''}
+            ${copyStatus === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100' : ''}
+          `}>
+            {copyMessage}
+          </div>
+        )}
       </div>
       <div className="flex-grow overflow-y-auto p-3 bg-gray-50 dark:bg-slate-600 rounded-md scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-500 scrollbar-track-transparent">
         {isLoading ? (

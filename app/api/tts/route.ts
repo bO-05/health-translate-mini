@@ -6,7 +6,9 @@ export const runtime = 'edge';
 export async function POST(req: Request) {
   const { text, targetLang } = await req.json();
 
-  console.log("[/api/tts] Received request - Text:", text ? text.substring(0, 50) + (text.length > 50 ? "..." : "") : "[No Text]", "TargetLang:", targetLang);
+  // console.log("[/api/tts] Received request - Text:", text ? text.substring(0, 50) + (text.length > 50 ? "..." : "") : "[No Text]", "TargetLang:", targetLang);
+  // Sanitized logging:
+  console.log(`[/api/tts] Received request - Text present: ${!!text}, Text length: ${text ? text.length : 0}, TargetLang: ${targetLang}`);
 
   if (!text) {
     console.error("[/api/tts] Error: Text is required");
@@ -15,6 +17,14 @@ export async function POST(req: Request) {
   if (!targetLang) {
     console.error("[/api/tts] Error: Target language is required");
     return new Response(JSON.stringify({ error: 'Target language is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const supportedTtsLanguages = ['en', 'id', 'de', 'es', 'zh', 'ja', 'ko'];
+  const normalizedTargetLang = targetLang.toLowerCase().split('-')[0];
+
+  if (!supportedTtsLanguages.includes(normalizedTargetLang)) {
+    console.error(`[/api/tts] Error: Unsupported target language: ${targetLang}. Supported are: ${supportedTtsLanguages.join(', ')}`);
+    return new Response(JSON.stringify({ error: `Unsupported target language: ${targetLang}. Supported are: ${supportedTtsLanguages.join(', ')}` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   const apiKey = process.env.ELEVEN_API_KEY;
@@ -26,7 +36,7 @@ export async function POST(req: Request) {
   // Determine ElevenLabs voice ID based on target language.
   // Using specific voice IDs provided by the user.
   let voiceId: string;
-  const lang = targetLang.toLowerCase();
+  const lang = normalizedTargetLang;
 
   switch (lang) {
     case 'en':

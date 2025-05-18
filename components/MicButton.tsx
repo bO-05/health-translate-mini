@@ -51,12 +51,23 @@ export default function MicButton({
     SpeechRecognitionRef.current = SR;
     setIsSpeechApiSupported(true);
 
-    navigator.permissions.query({ name: 'microphone' as PermissionName }).then((permissionStatus) => {
-      setIsPermissionGranted(permissionStatus.state === 'granted');
-      permissionStatus.onchange = () => {
+    // Check for navigator.permissions and then query, or assume not granted if API not present
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName }).then((permissionStatus) => {
         setIsPermissionGranted(permissionStatus.state === 'granted');
-      };
-    });
+        permissionStatus.onchange = () => {
+          setIsPermissionGranted(permissionStatus.state === 'granted');
+        };
+      }).catch(err => {
+        console.warn("Could not query microphone permission state:", err);
+        // Fallback: assume not granted if query fails, user will be prompted by getUserMedia
+        setIsPermissionGranted(false); 
+      });
+    } else {
+      console.warn("navigator.permissions API not supported, microphone access will be requested on first use.");
+      // Fallback: assume not granted, user will be prompted by getUserMedia later
+      setIsPermissionGranted(false); 
+    }
 
     const newRecognitionInstance = new SpeechRecognitionRef.current();
     newRecognitionInstance.continuous = true;
@@ -99,15 +110,19 @@ export default function MicButton({
       if (event.error === 'not-allowed' || event.error === 'permission-denied') {
         setIsPermissionGranted(false);
       }
+      // Always set recording states to false on error
       setIsActuallyRecording(false);
       onRecordingStateChange(false);
     };
 
     newRecognitionInstance.onend = () => {
-      if (isActuallyRecording) {
-        setIsActuallyRecording(false);
-        onRecordingStateChange(false);
-      }
+      // Revised logic: Always update state on 'end' to ensure cleanup.
+      // The SpeechRecognition service can end for various reasons (e.g. silence, network, or stop() called).
+      // We rely on handleToggleRecording to manage the intended start/stop state.
+      // This ensures the UI reflects that recognition is no longer active.
+      setIsActuallyRecording(false);
+      onRecordingStateChange(false);
+      console.log("Speech recognition service ended (onend event).");
     };
     recognitionRef.current = newRecognitionInstance;
 

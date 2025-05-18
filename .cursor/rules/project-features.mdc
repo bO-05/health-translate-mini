@@ -93,3 +93,26 @@ health-translate-mini/
 -   **Latency:** Target fast responses using Edge Functions and efficient APIs (ElevenLabs Flash).
 -   **Cost Optimization:** Be mindful of API usage; ElevenLabs caching is not part of MVP unless explicitly added.
 
+### 4.2 Non-Functional Requirements (NFRs)
+
+1.  **Performance**: The application should provide real-time or near real-time feedback for speech-to-text, translation, and text-to-speech.
+    *   STT: Latency < 500ms for interim results.
+    *   Translation API: P95 latency < 1 second.
+    *   TTS API: Time to first audio chunk < 1 second.
+    *   SSE: Updates should feel instantaneous.
+2.  **Scalability**: While this is a mini-project, the Vercel Edge Functions chosen for API routes are inherently scalable.
+3.  **Reliability**: API calls must have robust error handling and fallbacks (e.g., retry mechanisms if appropriate, clear user feedback on failure).
+4.  **Usability**: Clean, intuitive, and responsive UI. Minimal clicks to perform core actions. Clear visual cues for recording, loading, and error states. Accessibility considerations (e.g., keyboard navigation, ARIA attributes) should be kept in mind.
+5.  **Security & Privacy**: 
+    *   **Data in Transit**: All API communications (Mistral, ElevenLabs, and our own frontend-backend) MUST use HTTPS.
+    *   **Data at Rest**: No PII/PHI (Protected Health Information) should be stored by the application. If any caching or temporary storage of transcript/translation data is implemented, it must be short-lived and automatically cleared. If future enhancements require storage, industry-standard encryption (e.g., AES-256) for data at rest must be implemented. 
+    *   **HIPAA Compliance Considerations (Informational for future scope)**: While full HIPAA compliance is out of scope for this mini-project, design choices should not preclude future alignment. This would involve considerations such as: Business Associate Agreements (BAAs) with cloud providers and API vendors handling PHI, stringent access controls, audit logging of PHI access, data backup and disaster recovery plans specific to PHI, and regular security risk assessments.
+    *   **Input Sanitization**: All user-generated text inputs (though primarily from speech, consider if any text fields are added) should be treated as untrusted. While direct SQL injection isn't a risk with the current stack, be mindful of how data is passed to APIs to prevent any form of injection or manipulation if APIs are vulnerable.
+    *   **API Key Security**: API keys (Mistral, ElevenLabs) MUST be stored as environment variables and accessed only server-side (in Edge Functions). They should never be exposed to the client-side.
+    *   **Access Controls**: For the current scope, the application is public. Future enhancements requiring user accounts or restricted access would necessitate robust authentication and authorization mechanisms (e.g., OAuth 2.0, role-based access control).
+    *   **Audit Logging**: For the current scope, detailed audit logging is minimal. Future enhancements, especially if handling sensitive data, would require comprehensive logging of data access, modifications, and system events for security monitoring and compliance.
+    *   **Data Retention**: As no data is persistently stored, data retention policies are not currently applicable. If storage is introduced, a clear data retention and disposal policy aligned with legal and regulatory requirements (e.g., HIPAA) would be necessary.
+    *   **Log Sanitization**: Ensure that logs (especially server-side logs from API routes) do not inadvertently capture sensitive parts of the translated text. For example, log metadata or errors, but avoid logging full request/response payloads containing PHI if possible (or mask sensitive fields).
+6.  **Maintainability**: Code should be well-organized, follow Next.js conventions, and use clear naming. TypeScript for type safety. Components should be modular.
+7.  **Browser Compatibility**: Target modern evergreen browsers (Chrome, Firefox, Edge, Safari). Graceful degradation or notification for unsupported features (like Web Speech API).
+
