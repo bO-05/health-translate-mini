@@ -5,13 +5,15 @@ export const runtime = 'edge';
 
 export async function POST(req: Request) {
   const { text, targetLang } = await req.json();
+  const requestStartTime = Date.now();
+  const logPrefix = `[/api/tts RequestID: ${requestStartTime}]`;
 
   // console.log("[/api/tts] Received request - Text:", text ? text.substring(0, 50) + (text.length > 50 ? "..." : "") : "[No Text]", "TargetLang:", targetLang);
   // Sanitized logging:
-  console.log(`[/api/tts] Received request - Text present: ${!!text}, Text length: ${text ? text.length : 0}, TargetLang: ${targetLang}`);
+  console.log(`${logPrefix} Received request - Text present: ${!!text}, Text length: ${text ? text.length : 0}, TargetLang: ${targetLang}`);
 
   if (!text) {
-    console.error("[/api/tts] Error: Text is required");
+    console.error(`${logPrefix} Error: Text is required`);
     return new Response(JSON.stringify({ error: 'Text is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   if (!targetLang) {
@@ -62,23 +64,23 @@ export async function POST(req: Request) {
       break;
     // Add more cases here if new languages/voices are added
     default:
-      console.warn(`[/api/tts] No specific voice ID for targetLang: '${targetLang}'. Falling back to default English (Adam Stone).`);
+      console.warn(`${logPrefix} No specific voice ID for targetLang: '${targetLang}'. Falling back to default English (Adam Stone).`);
       voiceId = "NFG5qt843uXKj4pFvR7C"; // Default to Adam Stone (English)
       break;
   }
 
-  const elevenLabsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`;
+  const elevenLabsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_22050_32&optimize_streaming_latency=3`;
   const requestBody = {
     text: text,
-    model_id: 'eleven_multilingual_v2', 
+    model_id: 'eleven_multilingual_v2',
     voice_settings: {
       stability: 0.5,
       similarity_boost: 0.75,
     },
   };
 
-  console.log(`[/api/tts] Sending request to ElevenLabs: URL: ${elevenLabsUrl}, VoiceID: ${voiceId}, ModelID: ${requestBody.model_id}`);
-  // console.log("[/api/tts] ElevenLabs request body:", JSON.stringify(requestBody)); // Be cautious with logging full text if sensitive
+  console.log(`${logPrefix} Sending request to ElevenLabs: URL: ${elevenLabsUrl}, VoiceID: ${voiceId}, ModelID: ${requestBody.model_id}`);
+  const elevenApiStartTime = Date.now();
 
   try {
     const response = await fetch(elevenLabsUrl, {
@@ -90,10 +92,12 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify(requestBody),
     });
+    const elevenApiEndTime = Date.now();
+    console.log(`${logPrefix} ElevenLabs API call duration: ${(elevenApiEndTime - elevenApiStartTime) / 1000}s. Status: ${response.status}`);
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`[/api/tts] ElevenLabs API error: ${response.status} ${response.statusText}. VoiceID used: ${voiceId}. Details:`, errorBody);
+      console.error(`${logPrefix} ElevenLabs API error: ${response.status} ${response.statusText}. VoiceID used: ${voiceId}. Details:`, errorBody);
       return new Response(JSON.stringify({ error: `ElevenLabs API error: ${response.statusText}`, details: errorBody }), { status: response.status, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -110,7 +114,7 @@ export async function POST(req: Request) {
     }
 
   } catch (error) {
-    console.error('[/api/tts] Error calling ElevenLabs API:', error);
+    console.error(`${logPrefix} Error calling ElevenLabs API:`, error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ error: 'Failed to synthesize speech', details: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }

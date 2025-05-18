@@ -4,11 +4,11 @@ import { Mic } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
 interface MicButtonProps {
-  onSourceTextUpdate: (text: string) => void;
+  onTranscriptUpdate: (text: string) => void;
   onRecordingStateChange: (isRecording: boolean) => void;
-  currentSourceLang: string;
+  currentLang: string;
   onFinalTranscript: (text: string) => void;
-  disabled?: boolean;
+  isTranslating?: boolean;
 }
 
 // Extend window type to include SpeechRecognition related events for TS
@@ -28,11 +28,11 @@ declare global {
 }
 
 export default function MicButton({ 
-  onSourceTextUpdate, 
+  onTranscriptUpdate, 
   onRecordingStateChange,
-  currentSourceLang,
+  currentLang,
   onFinalTranscript,
-  disabled
+  isTranslating
 }: MicButtonProps) {
   const [isActuallyRecording, setIsActuallyRecording] = useState(false);
   const [isPermissionGranted, setIsPermissionGranted] = useState(false);
@@ -96,7 +96,7 @@ export default function MicButton({
           }
       }
 
-      onSourceTextUpdate(completeFinalTranscript + currentInterimTranscript);
+      onTranscriptUpdate(completeFinalTranscript + currentInterimTranscript);
       
       // If a new segment was finalized in this event and there's meaningful final text,
       // call onFinalTranscript with the *entire accumulated* final transcript.
@@ -137,9 +137,9 @@ export default function MicButton({
 
   useEffect(() => {
     if (recognitionRef.current) {
-      recognitionRef.current.lang = currentSourceLang;
+      recognitionRef.current.lang = currentLang;
     }
-  }, [currentSourceLang]);
+  }, [currentLang]);
 
   const requestMicrophonePermission = async () => {
     try {
@@ -166,7 +166,7 @@ export default function MicButton({
         console.log("Stopped recording via button.");
       } else {
         try {
-          recognitionRef.current.lang = currentSourceLang;
+          recognitionRef.current.lang = currentLang;
           recognitionRef.current.start();
           setIsActuallyRecording(true);
           onRecordingStateChange(true);
@@ -197,7 +197,7 @@ export default function MicButton({
       `}
       aria-label={!isPermissionGranted ? "Grant microphone permission" : isActuallyRecording ? "Stop recording" : "Start recording"}
       title={!isPermissionGranted ? "Grant microphone permission" : isActuallyRecording ? "Stop recording" : "Start recording"}
-      disabled={!isSpeechApiSupported || disabled}
+      disabled={!isSpeechApiSupported || isTranslating || isActuallyRecording && !isPermissionGranted}
     >
       <Mic size={32} />
     </button>

@@ -1,18 +1,29 @@
 "use client";
 
-import { ClipboardCopy, Volume2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ClipboardCopy } from 'lucide-react';
+import { useState, useEffect, ChangeEvent } from 'react';
 
-interface TranscriptPaneProps {
-  title: string;
+export interface TranscriptPaneProps {
   text: string;
+  setText?: (text: string) => void;
   error?: string | null;
   isLoading?: boolean;
-  onSpeak?: () => void;
   isSpeaking?: boolean;
+  isReadOnly?: boolean;
+  placeholder?: string;
+  paneType: 'source' | 'target';
 }
 
-export default function TranscriptPane({ title, text, error, isLoading, onSpeak, isSpeaking }: TranscriptPaneProps) {
+export default function TranscriptPane({ 
+  text, 
+  setText, 
+  error, 
+  isLoading, 
+  isSpeaking, 
+  isReadOnly,
+  placeholder,
+  paneType 
+}: TranscriptPaneProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [copyMessage, setCopyMessage] = useState('');
 
@@ -37,28 +48,25 @@ export default function TranscriptPane({ title, text, error, isLoading, onSpeak,
       });
   };
 
+  const handleTextChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    if (setText && !isReadOnly) {
+      setText(event.target.value);
+    }
+  };
+
+  const isEmpty = !text || text.trim() === '';
+  const displayPlaceholder = isEmpty && placeholder && !isLoading && !error;
+
   return (
-    <div className="bg-white dark:bg-slate-700 shadow-lg rounded-xl p-6 h-80 flex flex-col">
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">{title}</h2>
+    <div className={`bg-white dark:bg-slate-700 shadow-lg rounded-xl p-4 h-72 md:h-80 flex flex-col ${paneType === 'source' ? 'border-blue-500/50' : 'border-green-500/50'} border`}>
+      <div className="flex justify-end items-center mb-2">
         <div className="flex items-center space-x-2">
-          {onSpeak && text && !error && !isLoading && (
-            <button
-              onClick={onSpeak}
-              className="p-2 text-gray-500 hover:text-sky-600 dark:text-gray-400 dark:hover:text-sky-400 transition-colors disabled:opacity-50"
-              aria-label={isSpeaking ? "Speaking..." : "Speak text"}
-              title={isSpeaking ? "Speaking..." : "Speak text"}
-              disabled={isSpeaking || !text.trim()}
-            >
-              <Volume2 size={20} className={isSpeaking ? 'animate-pulse text-green-500' : ''} />
-            </button>
-          )}
           <button 
             onClick={handleCopy}
             className="p-2 text-gray-500 hover:text-sky-600 dark:text-gray-400 dark:hover:text-sky-400 transition-colors"
-            aria-label="Copy transcript"
-            title="Copy transcript"
-            disabled={!text || text.endsWith("...")}
+            aria-label="Copy text"
+            title="Copy text"
+            disabled={isEmpty || isLoading || !!error}
           >
             <ClipboardCopy size={20} />
           </button>
@@ -76,14 +84,21 @@ export default function TranscriptPane({ title, text, error, isLoading, onSpeak,
         {isLoading ? (
           <p className="text-gray-500 dark:text-gray-400 italic">Loading...</p>
         ) : error ? (
-          <p className="text-red-500 dark:text-red-400">{error}</p>
+          <p className="text-red-500 dark:text-red-400 whitespace-pre-wrap break-words">{error}</p>
+        ) : paneType === 'source' && setText && !isReadOnly ? (
+          <textarea
+            value={text}
+            onChange={handleTextChange}
+            placeholder={placeholder}
+            className="w-full h-full p-0 text-gray-800 dark:text-gray-100 bg-transparent resize-none focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 whitespace-pre-wrap break-words"
+            readOnly={isReadOnly || isLoading}
+          />
         ) : (
-          <p className="text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words">
-            {text}
+          <p className={`whitespace-pre-wrap break-words ${displayPlaceholder ? 'text-gray-400 dark:text-gray-500 italic' : 'text-gray-800 dark:text-gray-100'}`}>
+            {displayPlaceholder ? placeholder : text}
           </p>
         )}
       </div>
-      {/* TODO: Add Speak button here for translated text */}
     </div>
   );
 } 
