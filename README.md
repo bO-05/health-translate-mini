@@ -66,13 +66,53 @@ Follow these steps to get the project running on your local machine:
 
 ## Project Structure
 
-A brief overview of the key files and directories:
+```
+HealthTranslateMini/
+├── .cursorrules
+├── .env.example
+├── .env.local (User-managed - contains API keys)
+├── .gitignore
+├── app/
+│   ├── api/
+│   │   ├── translate/
+│   │   │   └── route.ts
+│   │   └── tts/
+│   │       └── route.ts
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── MicButton.tsx
+│   └── TranscriptPane.tsx
+├── node_modules/ (Managed by npm)
+├── .next/ (Build artifacts)
+├── next-env.d.ts
+├── next.config.mjs
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── tailwind.config.ts
+└── tsconfig.json
 
-*   `app/page.tsx`: Main frontend page component, managing UI and state.
-*   `app/api/translate/route.ts`: Edge Function for Mistral AI translation.
-*   `app/api/tts/route.ts`: Edge Function for ElevenLabs TTS.
-*   `components/MicButton.tsx`: Component for microphone input and STT.
-*   `components/TranscriptPane.tsx`: Component for displaying text panes.
-*   `docs/`: Contains project documentation like progress reports and architecture details.
+# Key File Descriptions:
+#
+# - app/page.tsx: Main page component, handles UI logic and state.
+# - app/layout.tsx: Root layout for the Next.js application.
+# - app/globals.css: Global styles.
+# - app/api/translate/route.ts: Edge function for handling translations via Mistral API.
+# - app/api/tts/route.ts: Edge function for handling text-to-speech via ElevenLabs API.
+#
+# - components/MicButton.tsx: Reusable UI component for microphone input.
+# - components/TranscriptPane.tsx: Reusable UI component for displaying text transcripts.
+#
+# - public/: (Currently empty, for static assets if needed in the future)
+#
+# - .env.local: For local environment variables (API keys). Not committed to Git.
+# - .env.example: Example structure for .env.local.
+#
+# - next.config.mjs, postcss.config.js, tailwind.config.ts, tsconfig.json: Standard Next.js/Tailwind/TypeScript config files.
+# - package.json, package-lock.json: npm package management.
+# - .cursorrules: Cursor AI assistant project configuration (internal rules, not user-facing documentation).
+```
 
-Refer to `docs/document-tree.txt` for a more detailed project structure. 
+The `docs/` directory is part of `.gitignore` and will not be pushed to the repository. 
