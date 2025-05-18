@@ -20,6 +20,11 @@ export default function HomePage() {
   const [ttsError, setTtsError] = useState<string | null>(null); // Added for TTS
   const abortControllerRef = useRef<AbortController | null>(null); // For cancelling fetch
   const audioRef = useRef<HTMLAudioElement | null>(null); // Ref to hold the Audio element
+  const isTranslatingRef = useRef(isTranslating);
+
+  useEffect(() => {
+    isTranslatingRef.current = isTranslating;
+  }, [isTranslating]);
 
   const supportedLanguages = [
     { code: 'en-US', name: 'English (US)', mistralCode: 'en' },
@@ -119,7 +124,7 @@ export default function HomePage() {
         if (done) {
           console.log("[handleTranslate] Stream reader done.");
           // If isTranslating is still true here, it implies the stream ended without a proper 'end' or 'error' event fully processed.
-          if (isTranslating) {
+          if (isTranslatingRef.current) {
             console.warn("[handleTranslate] Stream ended but still in translating state. Setting to not translating. Final buffer:", buffer);
             // Consider setting an error or a specific message if the buffer is not empty and indicates an issue.
             // For now, just ensure translating state is reset.
@@ -158,7 +163,12 @@ export default function HomePage() {
             if (line.startsWith('event: ')) {
               event = line.substring('event: '.length).trim();
             } else if (line.startsWith('data: ')) {
-              eventDataString = line.substring('data: '.length); // Assumes data is single line
+              const dataLine = line.substring('data: '.length);
+              if (eventDataString === '') {
+                eventDataString = dataLine;
+              } else {
+                eventDataString += '\n' + dataLine;
+              }
             }
           });
           
@@ -220,8 +230,8 @@ export default function HomePage() {
     } finally {
       // Ensure setIsTranslating is false if not already set by 'end' or 'error' event
       // This is a fallback.
-      if (isTranslating) { 
-      setIsTranslating(false);
+      if (isTranslatingRef.current) {
+        setIsTranslating(false);
       }
       if (abortControllerRef.current && signal === abortControllerRef.current.signal) {
         abortControllerRef.current = null;
@@ -361,7 +371,7 @@ export default function HomePage() {
       {/* <RetroGrid className="absolute inset-0 z-0" /> */}
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-background/50 to-background dark:from-transparent dark:via-slate-900/50 dark:to-slate-900" />
       
-      <header className="relative z-10 w-full max-w-5xl mb-8 text-center">
+      <header className="relative z-10 w-full max-w-5xl mb-6 text-center">
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-transparent bg-clip-text pb-2">
           HealthTranslate AI
         </h1>
@@ -371,31 +381,65 @@ export default function HomePage() {
         </header>
 
       <div className="relative z-10 w-full max-w-5xl p-4 md:p-6 bg-card dark:bg-slate-800/80 backdrop-blur-sm shadow-2xl rounded-xl border border-border dark:border-slate-700">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 md:mb-6 gap-2 sm:gap-4">
+          <div className="flex-1 w-full sm:w-auto">
+            <label htmlFor="source-lang-select" className="sr-only">Source Language</label>
+            <select 
+              id="source-lang-select"
+              value={selectedSourceLang}
+              onChange={(e) => setSelectedSourceLang(e.target.value)}
+              className="w-full p-2 border rounded-md bg-background dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 outline-none"
+              aria-label="Select source language"
+            >
+              {supportedLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={handleSwapLanguages}
+            className="p-2 rounded-full hover:bg-muted dark:hover:bg-slate-700 focus:bg-muted dark:focus:bg-slate-600 focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
+            aria-label="Swap source and target languages"
+            title="Swap source and target languages"
+          >
+            <ArrowRightLeft className="w-5 h-5 text-primary" />
+          </button>
+
+          <div className="flex-1 w-full sm:w-auto">
+            <label htmlFor="target-lang-select" className="sr-only">Target Language</label>
+            <select 
+              id="target-lang-select"
+              value={selectedTargetLang}
+              onChange={(e) => setSelectedTargetLang(e.target.value)}
+              className="w-full p-2 border rounded-md bg-background dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-offset-1 focus:ring-green-500 outline-none"
+              aria-label="Select target language"
+            >
+              {supportedLanguages.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
           {/* Source Language Pane */}
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold flex items-center">
-                <Languages className="w-6 h-6 mr-2 text-blue-500" /> Source Text
+                <Languages className="w-6 h-6 mr-2 text-blue-500" /> Source
               </h2>
-            <select 
-              value={selectedSourceLang}
-              onChange={(e) => setSelectedSourceLang(e.target.value)}
-                className="p-2 border rounded-md bg-background dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                {supportedLanguages.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </option>
-              ))}
-            </select>
             </div>
             <TranscriptPane
               text={sourceText}
-              setText={setSourceText} // Allow editing source text directly
-              isLoading={isRecording} // Show loading when recording
-              error={null} // No specific error for source pane for now
-              isReadOnly={isRecording} // Read-only while recording
+              setText={setSourceText} 
+              isLoading={isRecording} 
+              error={null} 
+              isReadOnly={isRecording}
               placeholder="Speak or type here..."
               paneType="source"
             />
@@ -405,74 +449,52 @@ export default function HomePage() {
                     onFinalTranscript={handleFinalSourceText} 
                     onRecordingStateChange={handleRecordingStateChange}
                     currentLang={selectedSourceLang}
-                    isTranslating={isTranslating} // Pass isTranslating to disable mic during translation
+                    isTranslating={isTranslatingRef.current} 
                 />
             </div>
           </div>
 
-          {/* Swap Button - Centered for medium screens, adjusted for small */}
-          <div className="flex items-center justify-center md:col-start-auto md:row-start-auto md:pt-20">
-          <button
-            onClick={handleSwapLanguages}
-              className="p-2 md:p-3 rounded-full hover:bg-muted dark:hover:bg-slate-700 transition-colors"
-              aria-label="Swap languages"
-          >
-              <ArrowRightLeft className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-          </button>
-          </div>
-
           {/* Target Language Pane */}
-          <div className="flex flex-col space-y-4 md:col-start-2">
+          <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold flex items-center">
-                <Volume2 className="w-6 h-6 mr-2 text-green-500" /> Translated Text
+                <Volume2 className="w-6 h-6 mr-2 text-green-500" /> Translated
               </h2>
-            <select 
-              value={selectedTargetLang}
-              onChange={(e) => setSelectedTargetLang(e.target.value)}
-                className="p-2 border rounded-md bg-background dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-green-500 outline-none"
-              >
-                {supportedLanguages.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </option>
-              ))}
-            </select>
-          </div>
-          <TranscriptPane 
-            text={translatedText} 
-            isLoading={isTranslating}
+            </div>
+            <TranscriptPane 
+              text={translatedText} 
+              isLoading={isTranslating}
               error={translationError || ttsError}
-              isReadOnly={true} // Target pane is always read-only for text
+              isReadOnly={true} 
               placeholder={isTranslating ? "Translating..." : "Translation will appear here..."}
               paneType="target"
-            isSpeaking={isSpeaking} // Pass speaking state
-          />
+              isSpeaking={isSpeaking} 
+            />
             <div className="flex items-center justify-between space-x-2">
-          <button 
-            onClick={handleTranslate}
+              <button 
+                onClick={handleTranslate}
                 disabled={isTranslating || isRecording || !sourceText.trim()}
-                className="w-1/2 p-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-400"
+                className="w-1/2 p-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-400 dark:disabled:bg-gray-500 focus:ring-2 focus:ring-offset-1 focus:ring-blue-400"
               >
                 {isTranslating ? "Translating..." : "Translate"}
               </button>
               <button 
                 onClick={handleSpeak}
                 disabled={isSpeaking || isTranslating || !translatedText.trim() || !!translationError || !!ttsError}
-                className="w-1/2 p-2 rounded-md bg-green-500 hover:bg-green-600 text-white disabled:bg-gray-400"
+                className="w-1/2 p-2 rounded-md border border-green-500 text-green-500 hover:bg-green-500 hover:text-white disabled:border-gray-400 disabled:text-gray-400 dark:disabled:border-gray-500 dark:disabled:text-gray-500 disabled:hover:bg-transparent disabled:hover:text-gray-400 focus:ring-2 focus:ring-offset-1 focus:ring-green-400"
               >
                 {isSpeaking ? "Speaking..." : "Speak"}
-          </button>
+              </button>
             </div>
           </div>
         </div>
 
         <footer className="mt-8 pt-4 border-t border-border dark:border-slate-700 text-center">
-            <p className="text-sm text-muted-foreground dark:text-slate-400">
+            <p className="text-sm text-muted-foreground dark:text-slate-300">
                 <Info size={14} className="inline mr-1" /> 
                 For informational purposes only. Not a substitute for professional medical advice.
             </p>
-            <p className="text-xs text-muted-foreground dark:text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground dark:text-slate-400 mt-1">
                 HealthTranslate AI &copy; {new Date().getFullYear()}
             </p>
         </footer>

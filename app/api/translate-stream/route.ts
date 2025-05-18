@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
           const targetLanguageName = languageCodeToName[normalizedTargetLang] || targetLang;
           const systemPrompt = `You are an expert medical translator. Translate the following text for medical and healthcare contexts to ${targetLanguageName}. Ensure accuracy with medical terminology. Respond ONLY with the translated text. Do not include any additional explanations, introductions, or conversational remarks.`;
-          const model = 'mistral-small-latest';
+          const model = 'mistral-medium-latest';
 
           sendSseMessage(controller, 'status', { message: `Translating to ${targetLanguageName} using ${model}...` });
           // console.log(`[SSE Stream ${startTime}] Sending to Mistral (${model}). Text: ${text.substring(0,30)}...`); // Commented out for privacy
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: `Source language: ${sourceLang || 'auto-detect'}. Text to translate: ${text}` }
               ],
+              temperature: 0.1,
+              max_tokens: 2000,
             }),
           });
 
