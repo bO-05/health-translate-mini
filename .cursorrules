@@ -1,0 +1,52 @@
+# Cursor-AI guidance for HealthTranslate
+#
+# ───────── GLOBAL ─────────
+project_name: HealthTranslateMini
+default_language: TypeScript
+frontend_path: apps/web
+backend_path: apps/modal
+ask_before_overwrite: false
+
+coding_standards:
+  - Next.js 14 App Router; Edge Runtime for API routes.
+  - Use Web Speech API (SpeechRecognition) for STT.
+  - Call Mistral and ElevenLabs via fetch inside Edge routes.
+  - Stream data with Server-Sent Events; no WebSockets.
+  - Tailwind utility classes; no separate CSS files.
+  - All React components are functional; TypeScript strict mode on.
+  - Optional Supabase: import from @supabase/ssr only.
+  - Follow healthcare data protection standards: no PII/PHI persistence without encryption.
+  - Implement proper error boundaries and fallbacks for critical medical contexts.
+  - Sanitize all user inputs and medical information from logs.
+
+folder_conventions:
+  - `app/api/**/route.ts` for Edge handlers.
+  - `components/XXX.tsx` for shared UI.
+env_files:
+  - .env.example -> include placeholders for all keys.
+    # MISTRAL_API_KEY=
+    # ELEVEN_API_KEY=
+    # SUPABASE_URL=
+    # SUPABASE_ANON_KEY=
+
+document_tree_file: document-tree.txt
+
+jobs:
+  - id: stt
+    name: Mic to transcript
+    success: Speaking "hello" shows "hello" in left pane.
+  - id: translate
+    name: Edge translate route
+    success: POST returns JSON {text:"hola"} for "hello"→Spanish.
+  - id: tts
+    name: Edge tts route
+    success: Audio plays for "hola".
+  - id: sse
+    name: Streaming pipeline
+    success: Both panes update live without page reload.
+
+ci_checks:
+  - npx next lint
+  - npx tsc --noEmit
+
+do_not_ask_confirmation: true

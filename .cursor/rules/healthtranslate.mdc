@@ -1,0 +1,66 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# HealthTranslateMini App Development Guidelines
+
+## Project Overview
+HealthTranslateMini is a real-time, multilingual, speech-to-speech translation web app prototype for patients and clinicians, designed for rapid development using browser APIs and Vercel Edge Functions.
+
+## Tech Stack (Lean Plan)
+-   **Frontend Framework:** Next.js 14 (App Router) with TypeScript.
+-   **UI Components:** React 18 (Functional Components with Hooks).
+-   **Styling:** Tailwind CSS (utility-first).
+-   **Speech-to-Text (STT):** Browser Web Speech API (`SpeechRecognition`).
+-   **Translation AI:** Mistral Chat Completion API (called via an Edge Function).
+-   **Text-to-Speech (TTS):** ElevenLabs API (e.g., Flash v2.5 model, called via an Edge Function).
+-   **API Layer:** Vercel Edge Functions (for `/api/translate`, `/api/tts`).
+-   **Real-time UI Updates:** Server-Sent Events (SSE) where applicable.
+-   **Optional Auth & Database:** Supabase (using `@supabase/ssr`).
+
+## Coding Standards (from `.cursorrules`)
+-   Next.js 14 App Router; Edge Runtime for API routes.
+-   Use Web Speech API (`SpeechRecognition`) for STT.
+-   Call Mistral and ElevenLabs via `fetch` inside Edge routes.
+-   Stream data with Server-Sent Events; no WebSockets.
+-   Tailwind utility classes; no separate CSS files.
+-   All React components are functional; TypeScript strict mode on.
+-   Optional Supabase: import from `@supabase/ssr` only.
+
+## Folder Conventions (Simplified)
+-   `app/api/**/route.ts` for Edge handlers.
+-   `components/XXX.tsx` for shared UI components.
+-   `lib/**` for non-UI helper functions (e.g., API client wrappers if needed, SSE helpers).
+-   `app/page.tsx` (and other route groups like `app/(dashboard)/page.tsx` if auth is added).
+
+## Environment Variables (Key Variables - see `.env.example`)
+```dotenv
+MISTRAL_API_KEY=
+ELEVEN_API_KEY=
+NEXT_PUBLIC_SUPPORTED_LANGS=en,es,id,zh # (example, can be extended)
+
+# Optional for Supabase
+# SUPABASE_URL=
+# SUPABASE_ANON_KEY=
+```
+
+## Core Development Workflow (Simplified)
+1.  **Mic Capture & Live Transcript (Client-Side):** `MicButton.tsx` uses Web Speech API, updates parent page state.
+2.  **Edge Translation Route (`/api/translate`):** Takes text, calls Mistral, returns translation.
+3.  **Dual Transcript UI:** `TranscriptPane.tsx` displays source and translated text.
+4.  **Edge TTS Route (`/api/tts`):** Takes text, calls ElevenLabs, returns MP3 audio.
+5.  **Speak Button:** Fetches TTS audio and plays it.
+6.  **Language Selector:** For source and target languages.
+7.  **(Optional) Supabase Auth & History.**
+
+## Success Criteria (Key MVP Jobs from `.cursorrules`)
+-   **Mic to transcript:** Speaking "hello" shows "hello" in the source transcript pane.
+-   **Edge translate route:** A POST request to `/api/translate` (e.g., with "hello" to Spanish) returns JSON like `{translatedText: "hola"}`.
+-   **Edge tts route:** A POST request to `/api/tts` (e.g., with "hola") returns playable `audio/mpeg` data.
+-   **Streaming pipeline (UI):** Both transcript panes update live (or near live after API calls) without a full page reload.
+
+## CI Checks (from `.cursorrules`)
+-   `npx next lint`
+-   `npx tsc --noEmit`
+
