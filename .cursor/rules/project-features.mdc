@@ -1,0 +1,95 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# HealthTranslateMini Features and Architecture
+
+## Core Features (MVP - based on `health_translate_mini_prompt.txt`)
+1.  **Mic Capture & Live Transcript:**
+    *   `MicButton.tsx` uses Web Speech API.
+    *   On `onresult`, pushes partial text to parent page state for display.
+
+2.  **Edge Translation Route (`/api/translate`):
+    *   Edge function takes `{text, targetLang}`.
+    *   Calls Mistral API with a medical-specific system prompt.
+    *   Returns `{translatedText: string}`.
+
+3.  **Dual Transcript UI:**
+    *   `TranscriptPane.tsx` components display source and translated text, with auto-scrolling.
+
+4.  **Edge TTS Route (`/api/tts`):
+    *   Edge function takes `{text, voiceId}`.
+    *   Calls ElevenLabs API (Flash v2.5, `mp3_22050_32` format).
+    *   Returns binary MP3 data.
+
+5.  **Speak Button:**
+    *   Fetches audio from `/api/tts` for the translated text.
+    *   Creates a blob URL and plays via an `<audio>` element.
+    *   Handles loading/disabled states.
+
+6.  **Language Selector:**
+    *   Dropdowns for source and target languages, populated from `NEXT_PUBLIC_SUPPORTED_LANGS`.
+
+7.  **(Optional) Supabase Auth & History:**
+    *   Email sign-in.
+    *   Optional saving of transcripts to a Supabase table.
+
+## Simplified Architecture Overview (HealthTranslateMini)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant BrowserUI as Next.js App (Client-Side)
+    participant EdgeTranslate as Vercel Edge (/api/translate)
+    participant MistralAPI as Mistral API
+    participant EdgeTTS as Vercel Edge (/api/tts)
+    participant ElevenLabsAPI as ElevenLabs API
+
+    User->>BrowserUI: Speaks (Mic)
+    BrowserUI->>BrowserUI: Web Speech API captures audio
+    BrowserUI->>BrowserUI: Updates Source Transcript Pane (Live)
+    
+    BrowserUI->>EdgeTranslate: POST {text, targetLang}
+    EdgeTranslate->>MistralAPI: Translate text
+    MistralAPI-->>EdgeTranslate: Translated text
+    EdgeTranslate-->>BrowserUI: JSON {translatedText}
+    BrowserUI->>BrowserUI: Updates Target Transcript Pane
+
+    BrowserUI->>EdgeTTS: POST {text (translated), voiceId}
+    EdgeTTS->>ElevenLabsAPI: Generate speech
+    ElevenLabsAPI-->>EdgeTTS: MP3 audio data
+    EdgeTTS-->>BrowserUI: audio/mpeg blob
+    BrowserUI->>User: Plays translated audio
+```
+
+## Simplified Repo Layout (No `apps/modal`)
+
+```bash
+health-translate-mini/
+  app/
+    api/
+      translate/route.ts
+      tts/route.ts
+    page.tsx
+    layout.tsx
+    globals.css
+  components/
+    MicButton.tsx
+    TranscriptPane.tsx
+    # ... other UI components
+  lib/ # Optional: for shared helpers (e.g. SSE, API clients)
+  public/
+  .env.example
+  next.config.mjs
+  package.json
+  tailwind.config.ts
+  tsconfig.json
+  README.md 
+```
+
+## Non-Functional Considerations (Lean Plan)
+-   **Privacy:** Focus on in-transit security for API calls. If Supabase is used, row-level security is key.
+-   **Latency:** Target fast responses using Edge Functions and efficient APIs (ElevenLabs Flash).
+-   **Cost Optimization:** Be mindful of API usage; ElevenLabs caching is not part of MVP unless explicitly added.
+

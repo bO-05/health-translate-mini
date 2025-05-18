@@ -1,0 +1,73 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# HealthTranslateMini Development Guide
+
+## Development Steps (MVP Features)
+
+Follow these steps to build the HealthTranslateMini prototype:
+
+1.  **Project Setup & UI Placeholders:**
+    *   Initialize Next.js 14 (App Router), TypeScript, Tailwind CSS.
+    *   Create basic `app/page.tsx`.
+    *   Create placeholder components: `components/MicButton.tsx`, `components/TranscriptPane.tsx`.
+    *   Set up basic layout and styling.
+
+2.  **Mic Capture & Live Transcript (Client-Side):**
+    *   Implement `MicButton.tsx` using the browser's Web Speech API (`SpeechRecognition`).
+    *   Ensure microphone permissions are handled.
+    *   On `onresult`, push partial and final transcribed text to a state managed in `app/page.tsx`.
+    *   Display the live transcript in the "source" `TranscriptPane`.
+
+3.  **Edge Translation Route (`/api/translate`):**
+    *   Create `/app/api/translate/route.ts` (Next.js Edge Runtime).
+    *   Accept `{ text: string, targetLang: string }` in the POST request body.
+    *   Call the Mistral Chat Completion API with the provided text and target language.
+        *   Use a system prompt like: "Translate into {{targetLang}}. Keep medical terms accurate."
+    *   Return the translated text as JSON: `{ translatedText: string }`.
+
+4.  **Integrate Translation into UI:**
+    *   In `app/page.tsx`, when the source transcript is finalized (or on a suitable trigger):
+        *   `fetch` the `/api/translate` route with the source text and selected target language.
+        *   Update a state variable for the translated text.
+        *   Display the translated text in the "target" `TranscriptPane`.
+
+5.  **Edge TTS Route (`/api/tts`):**
+    *   Create `/app/api/tts/route.ts` (Next.js Edge Runtime).
+    *   Accept `{ text: string, voiceId?: string }` in the POST request body.
+    *   Call the ElevenLabs API (e.g., Flash v2.5 model, `mp3_22050_32` output format).
+    *   Return the MP3 audio data as a binary response (e.g., `Response(audioBuffer, { headers: { 'Content-Type': 'audio/mpeg' } })`).
+
+6.  **Speak Button Functionality:**
+    *   Add a "Speak" button to the "target" `TranscriptPane` (or nearby).
+    *   When clicked, `fetch` the `/api/tts` route with the translated text.
+    *   Receive the MP3 blob, create an object URL (`URL.createObjectURL(blob)`).
+    *   Play the audio using an HTML `<audio>` element.
+    *   Handle loading states and disable the button while TTS is in progress.
+
+7.  **Language Selector:**
+    *   Implement a dropdown menu for selecting the source speech language.
+    *   Implement a dropdown menu for selecting the target translation language.
+    *   Populate these from an environment variable like `NEXT_PUBLIC_SUPPORTED_LANGS`.
+    *   Ensure `MicButton` uses the selected source language for `SpeechRecognition`.
+    *   Ensure the translation API call uses the selected target language.
+
+8.  **Streaming with Server-Sent Events (SSE) - Enhancement (If time permits after core functionality):**
+    *   Modify `/api/translate` and `/api/tts` to stream responses if the APIs support it and it makes sense (e.g., streaming translated text token by token from Mistral).
+    *   Update the client-side to handle SSE updates for transcripts and audio playback indications.
+    *   This makes the UI feel more real-time. (The prompt implies SSE for UI updates from Edge, which is good).
+
+9.  **(Optional) Supabase Auth & History:**
+    *   If time permits, integrate Supabase for email sign-in.
+    *   Protect a dashboard page.
+    *   Optionally, allow users to save transcripts to a Supabase table (`transcripts`) with row-level security.
+
+## Deliverables
+*   Publicly accessible Vercel URL of the working prototype.
+*   Source code repository (e.g., GitHub).
+*   A brief `README.md` explaining setup and how to run the app.
+
+**Focus on getting the core speech-to-text -> translation -> text-to-speech loop working robustly first.**
+
