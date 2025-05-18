@@ -66,7 +66,7 @@ Follow these steps to get the project running on your local machine:
 
 ## Project Structure
 
-```
+```bash
 HealthTranslateMini/
 ├── .cursorrules
 ├── .env.example
@@ -93,6 +93,7 @@ HealthTranslateMini/
 ├── postcss.config.js
 ├── tailwind.config.ts
 └── tsconfig.json
+```
 
 ## Key File Descriptions
 
