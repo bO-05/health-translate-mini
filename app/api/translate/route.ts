@@ -8,8 +8,6 @@ interface TranslationRequestBody {
   sourceLang?: string; // Optional: Mistral can often auto-detect, but good to have
 }
 
-// Basic list of language codes Mistral might support (not exhaustive)
-// Adapt this or use a more robust mapping if needed
 const languageCodeToName: { [key: string]: string } = {
   'en': 'English',
   'es': 'Spanish',
@@ -23,7 +21,6 @@ const languageCodeToName: { [key: string]: string } = {
   'ru': 'Russian',
   'ar': 'Arabic',
   'hi': 'Hindi'
-  // Add more as needed based on your supported languages
 };
 
 export async function POST(request: NextRequest) {
@@ -50,8 +47,7 @@ export async function POST(request: NextRequest) {
     const targetLanguageName = languageCodeToName[normalizedTargetLang] || targetLang;
     const systemPrompt = `You are an expert medical translator. Translate the following text for medical and healthcare contexts to ${targetLanguageName}. Ensure accuracy with medical terminology. Respond ONLY with the translated text. Do not include any additional explanations, introductions, or conversational remarks.`;
     
-    // Adjust model as needed - check Mistral documentation for latest/best models for translation
-    const model = 'mistral-medium-latest'; // Or other suitable model like mistral-large-latest
+    const model = 'mistral-medium-latest'; 
 
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
@@ -65,8 +61,8 @@ export async function POST(request: NextRequest) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Source language: ${sourceLang}. Text to translate: ${text}` }
         ],
-        // temperature: 0.1, // Lower for more deterministic translation
-        // max_tokens: 1000, // Adjust if needed
+        temperature: 0.1, // Lower for more deterministic translation
+        max_tokens: 2000, // Adjust if needed
       }),
     });
 
