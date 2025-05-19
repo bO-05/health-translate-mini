@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createEdgeClient } from '@/lib/supabase/server';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { supportedLanguages } from '@/lib/constants'; // Import shared languages
 
 export const runtime = 'edge';
 
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
   myLang = myLang ? myLang.trim() : '';
 
   const uuidRegex = /^[0-9a-f-]{36}$/i;
-  const langCodeRegex = /^[a-z]{2,3}(-[A-Z]{2})?$/;
+  // const langCodeRegex = /^[a-z]{2,3}(-[A-Z]{2})?$/; // Keep for format, but also check against supported list
 
   if (!roomId || !uuidRegex.test(roomId)) {
     return NextResponse.json({ error: 'Invalid or missing roomId (must be a UUID)' }, { status: 400 });
@@ -81,8 +82,13 @@ export async function GET(req: NextRequest) {
   if (!myUserId || !uuidRegex.test(myUserId)) {
     return NextResponse.json({ error: 'Invalid or missing myUserId (must be a UUID)' }, { status: 400 });
   }
-  if (!myLang || !langCodeRegex.test(myLang)) {
-    return NextResponse.json({ error: 'Invalid or missing myLang (must be ISO-639/BCP-47 code, e.g., en, en-US)' }, { status: 400 });
+  
+  // Validate myLang format and against supported languages (checking the base 2-letter code)
+  const myLangBase = myLang.split('-')[0];
+  const langCodeRegex = /^[a-z]{2}$/i; // Simplified for base code check after split
+
+  if (!myLang || !langCodeRegex.test(myLangBase) || !supportedLanguages.some(lang => lang.mistralCode === myLangBase)) {
+    return NextResponse.json({ error: `Invalid or unsupported myLang: '${myLang}'. Must be a supported 2-letter language code.` }, { status: 400 });
   }
 
   const textEncoder = new TextEncoder();

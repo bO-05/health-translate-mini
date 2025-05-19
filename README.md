@@ -23,14 +23,14 @@ Core functionalities are powered by:
     *   Real-time, two-way translated messaging between users.
     *   In-chat language preferences: select your speaking language and the language you want incoming messages translated to.
     *   Integrated Speech-to-Text (STT) and Text-to-Speech (TTS) within the chat interface.
-*   ↔️ **Language Selection:** Allows users to select source and target languages from a predefined list (for main translation and as defaults for chat).
+*   ↔️ **Language Selection:** Allows users to select source and target languages from a predefined list (for main translation and as defaults for chat), centralized in `lib/constants.ts`.
 *   🔄 **Swap Languages:** Quickly interchange source and target language selections (for main translation).
 *   📋 **Transcript Display:** Shows source and translated text in clear, readable panes (for main translation).
 *   ✂️ **Copy to Clipboard:** Easily copy transcripts and room codes with visual feedback.
 *   🎨 **Responsive UI:** Clean and intuitive interface that adapts to different screen sizes.
 *   🔒 **API Security:** API keys managed via server-side environment variables.
-*   ✔️ **Input Validation:** Checks for supported languages and required inputs in API routes.
-*   ⚙️ **Robust Frontend Logic:** Improved reliability for translation requests (AbortController) and UI state management.
+*   ✔️ **Input Validation:** Checks for supported languages (from `lib/constants.ts`) and required inputs in API routes.
+*   ⚙️ **Robust Frontend Logic:** Improved reliability for translation requests (AbortController) and UI state management. URI-encoded SSE parameters and guarded JSON parsing for SSE messages.
 
 ## Environment Setup
 
@@ -47,7 +47,7 @@ To run this project locally, you'll need to set up API keys for the translation,
     NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
     # NEXT_PUBLIC_APP_VERSION=1.1.0 # Optional: For displaying app version in footer
-    # NEXT_PUBLIC_SUPPORTED_LANGS can be set here if needed, defaults are in app/page.tsx
+    # NEXT_PUBLIC_SUPPORTED_LANGS can be set here if needed, defaults are in app/page.tsx (now lib/constants.ts)
     ```
     *   `MISTRAL_API_KEY`: Your API key for Mistral AI.
     *   `ELEVEN_API_KEY`: Your API key for ElevenLabs.
@@ -106,6 +106,7 @@ HealthTranslateMini/
 │   ├── MicButton.tsx
 │   └── TranscriptPane.tsx
 ├── lib/
+│   ├── constants.ts
 │   └── supabase/
 │       └── server.ts
 ├── node_modules/ (Managed by npm)
@@ -121,17 +122,18 @@ HealthTranslateMini/
 
 ## Key File Descriptions
 
-- **`app/page.tsx`**: Main page component, handles UI logic and state for both the core translation tool and the multi-user chat features.
+- **`app/page.tsx`**: Main page component, handles UI logic and state for both the core translation tool and the multi-user chat features. Imports supported languages from `lib/constants.ts`.
 - **`app/layout.tsx`**: Root layout for the Next.js application.
 - **`app/globals.css`**: Global styles.
-- **`app/api/translate/route.ts`**: Edge function for handling translations via Mistral API (for the main translation tool).
-- **`app/api/translate-stream/route.ts`**: Edge function for streaming translation responses (used by the main translation tool).
+- **`app/api/translate/route.ts`**: Edge function for handling translations via Mistral API (for the main translation tool). Validates languages against `lib/constants.ts`.
+- **`app/api/translate-stream/route.ts`**: Edge function for streaming translation responses (used by the main translation tool). Validates languages against `lib/constants.ts`.
 - **`app/api/tts/route.ts`**: Edge function for handling text-to-speech via ElevenLabs API.
 - **`app/api/room/route.ts`**: Edge function for creating/joining chat rooms.
-- **`app/api/send-message/route.ts`**: Edge function for sending chat messages.
-- **`app/api/subscribe-messages/route.ts`**: Edge function for subscribing to chat messages via SSE, including on-the-fly translation for the listener.
+- **`app/api/send-message/route.ts`**: Edge function for sending chat messages. Validates language against `lib/constants.ts`.
+- **`app/api/subscribe-messages/route.ts`**: Edge function for subscribing to chat messages via SSE, including on-the-fly translation for the listener. Validates language against `lib/constants.ts`.
 - **`components/MicButton.tsx`**: Reusable UI component for microphone input.
 - **`components/TranscriptPane.tsx`**: Reusable UI component for displaying text transcripts (used by the main translation tool).
+- **`lib/constants.ts`**: Shared constants for the application, such as the `supportedLanguages` array.
 - **`lib/supabase/server.ts`**: Utility for creating Supabase Edge client, used by chat-related API routes.
 - **`public/`**: (Currently empty, for static assets if needed in the future)
 - **`.env.local`**: For local environment variables (API keys). Not committed to Git.

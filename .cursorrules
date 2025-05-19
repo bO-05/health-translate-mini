@@ -58,7 +58,7 @@ api_endpoints:
 
 validation:
   - All UUIDs (roomId, userId, etc.) must be validated with regex before DB queries.
-  - All language codes must be validated using ISO-639/BCP-47 regex.
+  - All language codes must be validated using ISO-639/BCP-47 regex for format, and also validated against the centrally defined list of supported languages (e.g., from `lib/constants.ts`).
   - All input strings must be trimmed and checked for non-whitespace content.
   - Room code lookups must be case-insensitive.
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import MicButton from "@/components/MicButton";
 import TranscriptPane from "@/components/TranscriptPane";
 import { ArrowRightLeft, Languages, Volume2, Settings2, Info, MessageSquarePlus, LogIn, Users, Copy, Check, XCircle, Trash2, Send, Loader2 } from 'lucide-react'; // Added Send and Loader2
+import { supportedLanguages } from '@/lib/constants'; // Import from constants
 // import RetroGrid from "@/components/magicui/retro-grid";
 // import ShinyButton from "@/components/magicui/shiny-button";
 // import { cn } from "@/lib/utils";
@@ -69,18 +70,6 @@ export default function HomePage() {
   useEffect(() => {
     isTranslatingRef.current = isTranslating;
   }, [isTranslating]);
-
-  const supportedLanguages = [
-    { code: 'en-US', name: 'English (US)', mistralCode: 'en' },
-    { code: 'es-ES', name: 'Español (España)', mistralCode: 'es' },
-    { code: 'id-ID', name: 'Bahasa Indonesia', mistralCode: 'id' },
-    { code: 'zh-CN', name: '中文 (普通话)', mistralCode: 'zh' },
-    { code: 'fr-FR', name: 'Français', mistralCode: 'fr' },
-    { code: 'de-DE', name: 'Deutsch', mistralCode: 'de' },
-    { code: 'ja-JP', name: '日本語', mistralCode: 'ja' },
-    { code: 'ko-KR', name: '한국어', mistralCode: 'ko' },
-    // Add more from NEXT_PUBLIC_SUPPORTED_LANGS, ensure mistralCode is the simple 2-letter code for mistral
-  ];
 
   const handleSourceTextUpdate = useCallback((text: string) => {
     setSourceText(text);
@@ -542,7 +531,13 @@ export default function HomePage() {
   useEffect(() => {
     if (chatState === 'in_room' && roomId && userId && chatTargetLang) { // Use chatTargetLang
       const targetLangCode = chatTargetLang.split('-')[0]; // Use chat-specific target lang for SSE subscription
-      const url = `/api/subscribe-messages?roomId=${roomId}&myUserId=${userId}&myLang=${targetLangCode}`;
+      
+      // Encode URI components for safety
+      const encodedRoomId = encodeURIComponent(roomId);
+      const encodedUserId = encodeURIComponent(userId);
+      const encodedTargetLangCode = encodeURIComponent(targetLangCode);
+
+      const url = `/api/subscribe-messages?roomId=${encodedRoomId}&myUserId=${encodedUserId}&myLang=${encodedTargetLangCode}`;
       console.log(`[SSE] Connecting to: ${url}`);
       
       eventSourceRef.current = new EventSource(url);
@@ -553,13 +548,21 @@ export default function HomePage() {
       };
 
       eventSourceRef.current.onmessage = (event) => {
+        // Guard against parsing non-JSON data or empty data strings
+        if (!event.data || !event.data.trim().startsWith('{') || !event.data.trim().endsWith('}')) {
+          // console.log("[SSE] Received non-JSON or empty message, skipping parse:", event.data);
+          // This could be a keep-alive ping if not handled by comment char ':' by EventSource
+          if (event.data && event.data.trim() === ":keepalive") { // Example explicit check if backend sends this
+            // console.log("[SSE] Explicit keep-alive ping string received.");
+          }
+          return;
+        }
+
         try {
           // console.log("[SSE] Raw message data:", event.data);
           const eventData = JSON.parse(event.data);
           
           // Check for keep-alive ping (backend might send a simple object like { type: "ping" } or just a comment line)
-          // The standard EventSource API should ignore comment lines (starting with ':') automatically.
-          // If backend sends JSON for pings, e.g. { type: 'ping' }, handle it here.
           if (eventData.type === 'ping') {
             // console.log("[SSE] Keep-alive ping received.");
             return;

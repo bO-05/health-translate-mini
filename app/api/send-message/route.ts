@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createEdgeClient } from '@/lib/supabase/server';
+import { supportedLanguages } from '@/lib/constants'; // Import shared languages
 
 export const runtime = 'edge';
 
@@ -31,9 +32,6 @@ export async function POST(req: NextRequest) {
   const trimmedText = typeof text === 'string' ? text.trim() : '';
   const trimmedLang = typeof lang === 'string' ? lang.trim() : '';
 
-  // ISO-639/BCP-47 language code regex (e.g., en, en-US, es, fr, zh-CN)
-  const langCodeRegex = /^[a-z]{2,3}(-[A-Z]{2})?$/;
-
   // UUID regex
   const uuidRegex = /^[0-9a-f-]{36}$/i;
 
@@ -44,10 +42,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid or missing userId (must be a UUID)' }, { status: 400 });
   }
   if (!trimmedText) {
-    return NextResponse.json({ error: 'Invalid or missing text' }, { status: 400 });
+    return NextResponse.json({ error: 'Message text cannot be empty.' }, { status: 400 });
   }
-  if (!trimmedLang || !langCodeRegex.test(trimmedLang)) {
-    return NextResponse.json({ error: 'Invalid or missing lang (must be ISO-639/BCP-47 code, e.g., en, en-US)' }, { status: 400 });
+
+  // Validate lang format and against supported languages (checking the base 2-letter code)
+  const langBase = trimmedLang.split('-')[0];
+  const langCodeRegex = /^[a-z]{2}$/i; // Simplified for base code check
+
+  if (!trimmedLang || !langCodeRegex.test(langBase) || !supportedLanguages.some(l => l.mistralCode === langBase)) {
+    return NextResponse.json({ error: `Invalid or unsupported language code: '${trimmedLang}'. Must be a supported 2-letter language code.` }, { status: 400 });
   }
 
   // Check if roomId exists before inserting

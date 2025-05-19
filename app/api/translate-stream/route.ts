@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { supportedLanguages } from '@/lib/constants'; 
 
 // Re-use or adapt this from the original translate route
 const languageCodeToName: { [key: string]: string } = {
@@ -14,14 +15,35 @@ function sendSseMessage(controller: ReadableStreamDefaultController<Uint8Array>,
   controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
 }
 
+export const runtime = 'edge';
+
 export async function POST(request: NextRequest) {
   try {
     const { text, targetLang, sourceLang } = await request.json();
 
-    if (!text || !targetLang) {
-      return new Response(JSON.stringify({ error: 'Missing text or targetLang' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    // Validate inputs
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return new Response(JSON.stringify({ event: 'error', data: { message: 'Text to translate is required and must be a non-empty string.' } }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
+    if (!targetLang || typeof targetLang !== 'string') {
+      return new Response(JSON.stringify({ event: 'error', data: { message: 'Target language is required.' } }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (!sourceLang || typeof sourceLang !== 'string') {
+      return new Response(JSON.stringify({ event: 'error', data: { message: 'Source language is required.' } }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate against supported languages
+    const targetLangSupported = supportedLanguages.some(lang => lang.mistralCode === targetLang);
+    const sourceLangSupported = supportedLanguages.some(lang => lang.mistralCode === sourceLang);
+
+    if (!targetLangSupported) {
+      return new Response(JSON.stringify({ event: 'error', data: { message: `Target language '${targetLang}' is not supported.` } }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (!sourceLangSupported) {
+      return new Response(JSON.stringify({ event: 'error', data: { message: `Source language '${sourceLang}' is not supported.` } }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const normalizedTargetLang = targetLang.toLowerCase().split('-')[0];
     if (!languageCodeToName[normalizedTargetLang]) {
       return new Response(JSON.stringify({ error: `Unsupported target language: ${targetLang}` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -140,6 +162,4 @@ export async function POST(request: NextRequest) {
     }
     return new Response(JSON.stringify({ error: 'An unexpected error occurred setting up the stream', details: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
-}
-
-export const runtime = 'edge'; 
+} 
