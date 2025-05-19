@@ -11,7 +11,13 @@ interface SendMessagePayload {
   lang: string;
 }
 
-// POST /api/send-message - Send a message to a room
+/**
+ * Handles POST requests to send a message to a chat room.
+ *
+ * Validates the incoming JSON payload for required fields (`roomId`, `userId`, `text`, `lang`), checks that the specified room exists, and inserts a new message into the database. Returns appropriate HTTP status codes and error messages for invalid input, missing resources, or database errors. On success, responds with the inserted message's ID and timestamp.
+ *
+ * @returns A JSON response indicating success with message data, or an error with details and appropriate HTTP status.
+ */
 export async function POST(req: NextRequest) {
   const cookieStore = cookies();
   const supabase = createEdgeClient(cookieStore);
