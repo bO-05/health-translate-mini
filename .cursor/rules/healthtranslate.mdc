@@ -1,8 +1,91 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
+# HealthTranslateMini: Cursor Rules
+
+## Project Structure
+
+- The main frontend and backend code is in the [`app/`](mdc:app) directory.
+  - API routes (Edge handlers) are in [`app/api/**/route.ts`](mdc:app/api).
+  - Shared UI components are in [`components/`](mdc:components).
+  - Non-UI helpers are in [`lib/`](mdc:lib).
+- The project root contains configuration and environment files:
+  - [`next.config.mjs`](mdc:next.config.mjs), [`tailwind.config.ts`](mdc:tailwind.config.ts), [`tsconfig.json`](mdc:tsconfig.json), [`package.json`](mdc:package.json)
+  - Environment variables: [`.env.example`](mdc:.env.example), `.env.local` (user-managed, not committed)
+- See [`docs/document-tree.txt`](mdc:docs/document-tree.txt) for a full directory tree and key file descriptions.
+
+## Coding Standards
+
+- Use Next.js 14 App Router and Edge Runtime for API routes.
+- All React components must be functional and written in TypeScript (strict mode).
+- Use Tailwind utility classes; do not create separate CSS files.
+- Use the Web Speech API (`SpeechRecognition`) for STT in the browser.
+- Call Mistral and ElevenLabs APIs via fetch inside Edge routes.
+- Stream data with Server-Sent Events (SSE); do not use WebSockets.
+- Supabase (if used) must be imported from `@supabase/ssr` only.
+- All endpoints must be protected by Row Level Security (RLS) in Supabase.
+
+## Folder Conventions
+
+- `app/api/**/route.ts`: Edge API handlers.
+- `components/XXX.tsx`: Shared UI components.
+- `lib/**`: Non-UI helpers.
+
+## Environment Files
+
+- `.env.example` must include placeholders for all required keys.
+- `.env.local` is for user secrets and is not committed.
+
+## API Endpoints
+
+- All new endpoints must be documented and follow RESTful conventions.
+- Main endpoints:
+  - `app/api/room/route.ts`: `POST` (create room), `GET` (join room, case-insensitive)
+  - `app/api/send-message/route.ts`: `POST` (send message)
+  - `app/api/subscribe-messages/route.ts`: `GET` (subscribe to messages via SSE)
+
+## Validation
+
+- All UUIDs (roomId, userId, etc.) must be validated with regex before DB queries.
+- All language codes must be validated using ISO-639/BCP-47 regex.
+- All input strings must be trimmed and checked for non-whitespace content.
+- Room code lookups must be case-insensitive.
+
+## Logging & Security
+
+- PHI/PII must never be logged in production.
+- Error logs and responses must be environment-aware:
+  - Detailed in development
+  - Generic in production
+
+## SSE (Server-Sent Events)
+
+- All SSE stream chunks (messages, keepalives) must be encoded as Uint8Array.
+- Keep-alive pings every 10 seconds to prevent idle disconnects.
+- Resource cleanup (unsubscribe, clearInterval) must be robust on error/disconnect.
+
+## Supabase
+
+- Supabase client creation must be wrapped in try/catch.
+- Errors must include the original error message/stack for debugging.
+- All endpoints must be protected by RLS in Supabase.
+- The public anon key is safe only because of RLS.
+
+## Dependencies
+
+- Use the latest stable versions of `@supabase/ssr` and `@supabase/supabase-js`.
+
+## CI Checks
+
+- Run `npx next lint` and `npx tsc --noEmit` before merging.
+
+## Miscellaneous
+
+- Do not ask for confirmation before making changes (`do_not_ask_confirmation: true`).
+- For further details, see [`README.md`](mdc:README.md) and [`docs/cursorrules.txt`](mdc:docs/cursorrules.txt).
+
 # HealthTranslateMini App Development Guidelines
 
 ## Project Overview

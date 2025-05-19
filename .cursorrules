@@ -3,8 +3,8 @@
 # ───────── GLOBAL ─────────
 project_name: HealthTranslateMini
 default_language: TypeScript
-frontend_path: apps/web
-backend_path: apps/modal
+frontend_path: app/
+backend_path: app/api/
 ask_before_overwrite: false
 
 coding_standards:
@@ -15,19 +15,16 @@ coding_standards:
   - Tailwind utility classes; no separate CSS files.
   - All React components are functional; TypeScript strict mode on.
   - Optional Supabase: import from @supabase/ssr only.
-  - Follow healthcare data protection standards: no PII/PHI persistence without encryption.
-  - Implement proper error boundaries and fallbacks for critical medical contexts.
-  - Sanitize all user inputs and medical information from logs.
 
 folder_conventions:
   - `app/api/**/route.ts` for Edge handlers.
   - `components/XXX.tsx` for shared UI.
+  - `lib/**` for non-UI helpers.
+
 env_files:
   - .env.example -> include placeholders for all keys.
-    MISTRAL_API_KEY=
-    ELEVEN_API_KEY=
-    NEXT_PUBLIC_SUPABASE_URL=
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=
+    # SUPABASE_URL=
+    # SUPABASE_ANON_KEY=
 
 document_tree_file: document-tree.txt
 
@@ -48,5 +45,41 @@ jobs:
 ci_checks:
   - npx next lint
   - npx tsc --noEmit
+
+api_endpoints:
+  - All new endpoints must be documented and follow RESTful conventions.
+  - app/api/room/route.ts:
+      - POST: create room
+      - GET: join room (by code, case-insensitive)
+  - app/api/send-message/route.ts:
+      - POST: send message
+  - app/api/subscribe-messages/route.ts:
+      - GET: subscribe to messages (SSE)
+
+validation:
+  - All UUIDs (roomId, userId, etc.) must be validated with regex before DB queries.
+  - All language codes must be validated using ISO-639/BCP-47 regex.
+  - All input strings must be trimmed and checked for non-whitespace content.
+  - Room code lookups must be case-insensitive.
+
+logging_security:
+  - PHI/PII must never be logged in production.
+  - Error logs and responses must be environment-aware:
+      - Detailed in development
+      - Generic in production
+
+sse:
+  - All SSE stream chunks (messages, keepalives) must be encoded as Uint8Array.
+  - Keep-alive pings every 10 seconds to prevent idle disconnects.
+  - Resource cleanup (unsubscribe, clearInterval) must be robust on error/disconnect.
+
+supabase:
+  - Supabase client creation must be wrapped in try/catch.
+  - Errors must include original error message/stack for debugging.
+  - All endpoints must be protected by RLS in Supabase.
+  - Public anon key is safe only because of RLS.
+
+dependencies:
+  - Use latest stable versions of @supabase/ssr and @supabase/supabase-js.
 
 do_not_ask_confirmation: true
