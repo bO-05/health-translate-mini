@@ -39,10 +39,16 @@ To run this project locally, you'll need to set up API keys for the translation 
     ```env
     MISTRAL_API_KEY=your_mistral_api_key_here
     ELEVEN_API_KEY=your_elevenlabs_api_key_here
+    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
     # NEXT_PUBLIC_SUPPORTED_LANGS can be set here if needed, defaults are in app/page.tsx
     ```
     *   `MISTRAL_API_KEY`: Your API key for Mistral AI.
     *   `ELEVEN_API_KEY`: Your API key for ElevenLabs.
+    *   `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
+    *   `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase project anonymous key.
+
+> **Note:** `NEXT_PUBLIC_SUPABASE_ANON_KEY` is exposed to the browser and is **not a secret key**. You must enable Row Level Security (RLS) in your Supabase project and define appropriate policies to prevent unauthorized access to your data. Never use the service role key in client-side code.
 
 ## Getting Started
 
@@ -74,6 +80,12 @@ HealthTranslateMini/
 ├── .gitignore
 ├── app/
 │   ├── api/
+│   │   ├── room/
+│   │   │   └── route.ts
+│   │   ├── send-message/
+│   │   │   └── route.ts
+│   │   ├── subscribe-messages/
+│   │   │   └── route.ts
 │   │   ├── translate/
 │   │   │   └── route.ts
 │   │   └── tts/
@@ -84,6 +96,9 @@ HealthTranslateMini/
 ├── components/
 │   ├── MicButton.tsx
 │   └── TranscriptPane.tsx
+├── lib/
+│   └── supabase/
+│       └── server.ts
 ├── node_modules/ (Managed by npm)
 ├── .next/ (Build artifacts)
 ├── next-env.d.ts
@@ -107,6 +122,10 @@ HealthTranslateMini/
 - **`public/`**: (Currently empty, for static assets if needed in the future)
 - **`.env.local`**: For local environment variables (API keys). Not committed to Git.
 - **`.env.example`**: Example structure for `.env.local`.
+- **`lib/supabase/server.ts`**: Utility for creating Supabase Edge client.
+- **`app/api/room/route.ts`**: Edge function for creating/joining chat rooms.
+- **`app/api/send-message/route.ts`**: Edge function for sending chat messages.
+- **`app/api/subscribe-messages/route.ts`**: Edge function for subscribing to chat messages via SSE.
 - **`next.config.mjs`**, **`postcss.config.js`**, **`tailwind.config.ts`**, **`tsconfig.json`**: Standard Next.js/Tailwind/TypeScript config files.
 - **`package.json`**, **`package-lock.json`**: npm package management.
 - **`.cursorrules`**: Cursor AI assistant project configuration (internal rules, not user-facing documentation).
