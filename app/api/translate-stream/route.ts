@@ -46,12 +46,12 @@ export async function POST(request: NextRequest) {
 
     const normalizedTargetLang = targetLang.toLowerCase().split('-')[0];
     if (!languageCodeToName[normalizedTargetLang]) {
-      return new Response(JSON.stringify({ error: `Unsupported target language: ${targetLang}` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ event: 'error', data: { message: `Unsupported target language: ${targetLang}. Supported are: ${Object.keys(languageCodeToName).join(', ')}` } }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     const mistralApiKey = process.env.MISTRAL_API_KEY;
     if (!mistralApiKey) {
-      return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ event: 'error', data: { message: 'API key not configured' } }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     const stream = new ReadableStream({
@@ -160,6 +160,6 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new Response(JSON.stringify({ error: 'An unexpected error occurred setting up the stream', details: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ event: 'error', data: { message: 'An unexpected error occurred setting up the stream', details: errorMessage } }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 } 

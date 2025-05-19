@@ -305,10 +305,10 @@ export default function HomePage() {
     setTtsError(null);
 
     // Clean up previous audio element and URL if any
-    if (audioRef.current && audioRef.current.src) {
+    if (audioRef.current?.src) { // Optional chaining
       URL.revokeObjectURL(audioRef.current.src);
-      audioRef.current = null;
     }
+    audioRef.current = null; // Ensure it's null before creating a new Audio object
 
     try {
       const targetLangCode = selectedTargetLang.split('-')[0];
@@ -360,6 +360,7 @@ export default function HomePage() {
             setTtsError(`Error playing audio: ${playError.message}`);
             setIsSpeaking(false);
             URL.revokeObjectURL(audioUrl); // Clean up on play error
+            audioRef.current = null; // Clear ref on error
         });
       };
       newAudio.onended = () => {
@@ -715,10 +716,10 @@ export default function HomePage() {
     setTtsLoadingMessageId(messageId); // Set loading for this specific message
     setTtsError(null);
 
-    if (audioRef.current && audioRef.current.src) {
+    if (audioRef.current?.src) { // Optional chaining
       URL.revokeObjectURL(audioRef.current.src);
-      audioRef.current = null;
     }
+    audioRef.current = null; // Ensure it's null before creating a new Audio object
 
     try {
       const language = langCode || 'en'; // Default to English if langCode is not provided
@@ -749,6 +750,7 @@ export default function HomePage() {
         setIsSpeaking(false);
         setTtsLoadingMessageId(null); // Clear loading ID
         URL.revokeObjectURL(audioUrl);
+        audioRef.current = null; // Clear ref on error
       });
       newAudio.onended = () => {
         setIsSpeaking(false);
