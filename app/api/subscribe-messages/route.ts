@@ -63,17 +63,30 @@ export async function GET(req: NextRequest) {
   const supabase = createEdgeClient(cookieStore);
   const { searchParams } = new URL(req.url);
 
-  const roomId = searchParams.get('roomId');
-  const myUserId = searchParams.get('myUserId'); // e.g., "patient" or "provider"
-  const myLang = searchParams.get('myLang');     // Language the current user understands / wants to see translations in
-  // const targetLang = searchParams.get('targetLang'); // Language of the *other* user (this is implicitly original_lang of incoming message)
+  let roomId = searchParams.get('roomId');
+  let myUserId = searchParams.get('myUserId');
+  let myLang = searchParams.get('myLang');
 
-  if (!roomId || !myUserId || !myLang) {
-    return NextResponse.json(
-      { error: 'Missing required query parameters: roomId, myUserId, myLang' },
-      { status: 400 }
-    );
+  // Trim and validate
+  roomId = roomId ? roomId.trim() : '';
+  myUserId = myUserId ? myUserId.trim() : '';
+  myLang = myLang ? myLang.trim() : '';
+
+  const uuidRegex = /^[0-9a-f-]{36}$/i;
+  const langCodeRegex = /^[a-z]{2,3}(-[A-Z]{2})?$/;
+
+  if (!roomId || !uuidRegex.test(roomId)) {
+    return NextResponse.json({ error: 'Invalid or missing roomId (must be a UUID)' }, { status: 400 });
   }
+  if (!myUserId || !uuidRegex.test(myUserId)) {
+    return NextResponse.json({ error: 'Invalid or missing myUserId (must be a UUID)' }, { status: 400 });
+  }
+  if (!myLang || !langCodeRegex.test(myLang)) {
+    return NextResponse.json({ error: 'Invalid or missing myLang (must be ISO-639/BCP-47 code, e.g., en, en-US)' }, { status: 400 });
+  }
+
+  const textEncoder = new TextEncoder();
+  let keepAliveInterval: NodeJS.Timeout;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -83,20 +96,30 @@ export async function GET(req: NextRequest) {
 
       const handleNewMessage = async (payload: any) => {
         if (isControllerClosed) {
-          console.log('SSE: Controller closed, skipping message processing for payload:', payload);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('SSE: Controller closed, skipping message processing for payload:', payload);
+          }
           return;
         }
-        console.log('SSE: New message event from Supabase:', JSON.stringify(payload, null, 2));
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('SSE: New message event from Supabase:', JSON.stringify(payload, null, 2));
+        }
         const newMessage = payload.new;
 
         if (newMessage && newMessage.sender_user_id !== myUserId) {
-          console.log(`SSE: Processing message ID ${newMessage.id} from other user ${newMessage.sender_user_id}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`SSE: Processing message ID ${newMessage.id} from other user ${newMessage.sender_user_id}`);
+          }
           try {
             let translatedText = newMessage.original_text;
             if (newMessage.original_lang !== myLang) {
-              console.log(`SSE: Message ID ${newMessage.id} needs translation from ${newMessage.original_lang} to ${myLang}.`);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`SSE: Message ID ${newMessage.id} needs translation from ${newMessage.original_lang} to ${myLang}.`);
+              }
               translatedText = await translateText(newMessage.original_text, newMessage.original_lang, myLang);
-              console.log(`SSE: Message ID ${newMessage.id} translation result: "${translatedText.substring(0, 100)}..."`);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`SSE: Message ID ${newMessage.id} translation result: "${translatedText.substring(0, 100)}..."`);
+              }
             }
 
             const messageData = {
@@ -110,23 +133,27 @@ export async function GET(req: NextRequest) {
             };
             
             const eventString = `data: ${JSON.stringify(messageData)}\n\n`;
-            console.log(`SSE: Enqueuing event for message ID ${newMessage.id}: ${eventString.trim()}`);
-            controller.enqueue(eventString);
-            console.log(`SSE: Successfully enqueued event for message ID ${newMessage.id}`);
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`SSE: Enqueuing event for message ID ${newMessage.id}: ${eventString.trim()}`);
+            }
+            controller.enqueue(textEncoder.encode(eventString));
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`SSE: Successfully enqueued event for message ID ${newMessage.id}`);
+            }
 
           } catch (error: any) {
-            console.error(`SSE: Error processing message ID ${newMessage.id}:`, error);
-            // Optionally, inform the client about the error, though this might be noisy
-            // if (!isControllerClosed) {
-            //   controller.enqueue(`event: error\ndata: ${JSON.stringify({ message: "Error processing message", error: error.message })}\n\n`);
-            // }
-            // Decide if a single message processing error should close the whole stream.
-            // For now, let's not close it here, to allow future messages.
+            if (process.env.NODE_ENV !== 'production') {
+              console.error(`SSE: Error processing message ID ${newMessage.id}:`, error);
+            }
           }
         } else if (newMessage) {
-          console.log(`SSE: Ignoring message ID ${newMessage.id} from self (user ${myUserId})`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`SSE: Ignoring message ID ${newMessage.id} from self (user ${myUserId})`);
+          }
         } else {
-          console.warn('SSE: Received payload.new but it was undefined or null.', payload);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('SSE: Received payload.new but it was undefined or null.', payload);
+          }
         }
       };
 
@@ -139,26 +166,33 @@ export async function GET(req: NextRequest) {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-            console.log(`Successfully subscribed to Supabase Realtime channel: ${channelName}`);
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`Successfully subscribed to Supabase Realtime channel: ${channelName}`);
+            }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error(`Error status for Supabase Realtime channel ${channelName}: ${status}`);
+            if (process.env.NODE_ENV !== 'production') {
+              console.error(`Error status for Supabase Realtime channel ${channelName}: ${status}`);
+            }
             if (!isControllerClosed) {
+              supabase.removeChannel(realtimeChannel);
               controller.error(new Error(`Supabase Realtime channel error: ${status}`));
               controller.close();
               isControllerClosed = true;
               clearInterval(keepAliveInterval);
             }
           } else {
-            console.log(`Supabase Realtime status for ${channelName}: ${status}`);
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`Supabase Realtime status for ${channelName}: ${status}`);
+            }
           }
         });
 
-      // Keep-alive: send a comment event every 20 seconds to prevent timeout
-      const keepAliveInterval = setInterval(() => {
-        if (!isControllerClosed) { // Check before enqueuing
-          controller.enqueue(':keepalive\n\n');
+      // Keep-alive: send a comment event every 10 seconds to prevent timeout
+      keepAliveInterval = setInterval(() => {
+        if (!isControllerClosed) {
+          controller.enqueue(textEncoder.encode(':keepalive\n\n'));
         }
-      }, 20000);
+      }, 10000);
 
       // Cleanup on stream cancellation (client disconnects)
       return () => {
@@ -182,4 +216,4 @@ export async function GET(req: NextRequest) {
       'Connection': 'keep-alive',
     },
   });
-} 
+}

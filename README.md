@@ -48,6 +48,8 @@ To run this project locally, you'll need to set up API keys for the translation 
     *   `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
     *   `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase project anonymous key.
 
+> **Note:** `NEXT_PUBLIC_SUPABASE_ANON_KEY` is exposed to the browser and is **not a secret key**. You must enable Row Level Security (RLS) in your Supabase project and define appropriate policies to prevent unauthorized access to your data. Never use the service role key in client-side code.
+
 ## Getting Started
 
 Follow these steps to get the project running on your local machine:

@@ -5,13 +5,8 @@ import { createEdgeClient } from '@/lib/supabase/server'; // We'll create this u
 export const runtime = 'edge';
 
 function generateRoomCode(length: number = 6): string {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  const charactersLength = characters.length;
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-  return result;
+  // Use crypto.randomUUID for better randomness
+  return crypto.randomUUID().replace(/-/g, '').slice(0, length).toUpperCase();
 }
 
 // POST /api/room - Create a new room
@@ -22,10 +17,11 @@ export async function POST(req: NextRequest) {
   let roomCode = generateRoomCode();
   let roomCreated = false;
   let attempts = 0;
-  const maxAttempts = 5; // Avoid infinite loop in case of too many collisions (highly unlikely)
+  const maxAttempts = 5;
   let newRoom;
 
   while (!roomCreated && attempts < maxAttempts) {
+    attempts++;
     try {
       const { data, error } = await supabase
         .from('rooms')
@@ -33,12 +29,11 @@ export async function POST(req: NextRequest) {
         .select('id, room_code')
         .single();
 
+      if (error && error.code === '23505') { // Unique constraint violation
+        roomCode = generateRoomCode();
+        continue;
+      }
       if (error) {
-        if (error && error.code === '23505') { // Unique constraint violation
-          roomCode = generateRoomCode(); // Regenerate code and retry
-          attempts++;
-          continue;
-        }
         console.error('Error creating room:', error);
         return NextResponse.json({ error: 'Failed to create room', details: error.message }, { status: 500 });
       }
@@ -51,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!roomCreated) {
-    return NextResponse.json({ error: 'Failed to generate a unique room code after multiple attempts' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to generate a unique room code after multiple attempts' }, { status: 503 });
   }
 
   return NextResponse.json(newRoom, { status: 201 });
@@ -62,11 +57,12 @@ export async function GET(req: NextRequest) {
   const cookieStore = cookies();
   const supabase = createEdgeClient(cookieStore);
   const { searchParams } = new URL(req.url);
-  const roomCode = searchParams.get('room_code') ?? searchParams.get('roomCode');
+  let roomCode = searchParams.get('room_code') ?? searchParams.get('roomCode');
 
   if (!roomCode) {
     return NextResponse.json({ error: 'room_code (or roomCode) query parameter is required' }, { status: 400 });
   }
+  roomCode = roomCode.toUpperCase();
 
   try {
     const { data: room, error } = await supabase
@@ -75,15 +71,13 @@ export async function GET(req: NextRequest) {
       .eq('room_code', roomCode)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching room:', error);
       return NextResponse.json({ error: 'Failed to fetch room', details: error.message }, { status: 500 });
     }
-
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
-
     return NextResponse.json(room, { status: 200 });
   } catch (e: any) {
     console.error('Unexpected error fetching room:', e);
