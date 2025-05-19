@@ -24,10 +24,10 @@ folder_conventions:
   - `components/XXX.tsx` for shared UI.
 env_files:
   - .env.example -> include placeholders for all keys.
-    # MISTRAL_API_KEY=
-    # ELEVEN_API_KEY=
-    # SUPABASE_URL=
-    # SUPABASE_ANON_KEY=
+    MISTRAL_API_KEY=
+    ELEVEN_API_KEY=
+    SUPABASE_URL=
+    SUPABASE_ANON_KEY=
 
 document_tree_file: document-tree.txt
 
