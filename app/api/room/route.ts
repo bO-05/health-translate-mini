@@ -83,4 +83,16 @@ export async function GET(req: NextRequest) {
     console.error('Unexpected error fetching room:', e);
     return NextResponse.json({ error: 'Unexpected error fetching room', details: e.message }, { status: 500 });
   }
+}
+
+// Explicitly handle OPTIONS requests
+export async function OPTIONS(req: NextRequest) {
+  return NextResponse.json(null, {
+    status: 204, // No Content
+    headers: {
+      'Access-Control-Allow-Origin': '*', // Adjust as necessary for your CORS policy
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 } 
