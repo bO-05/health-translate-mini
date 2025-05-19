@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: 'Target language is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const supportedTtsLanguages = ['en', 'id', 'de', 'es', 'zh', 'ja', 'ko'];
+  const supportedTtsLanguages = ['en', 'id', 'de', 'es', 'fr', 'zh', 'ja', 'ko'];
   const normalizedTargetLang = targetLang.toLowerCase().split('-')[0];
 
   if (!supportedTtsLanguages.includes(normalizedTargetLang)) {
@@ -62,6 +62,9 @@ export async function POST(req: Request) {
     case 'ko':
       voiceId = "jB1Cifc2UQbq1gR3wnb0"; // Bin (Korean) - Colon removed
       break;
+    case 'fr':
+      voiceId = "aQROLel5sQbj1vuIVi6B"; // Nicolas (French) - Colon removed
+      break;      
     // Add more cases here if new languages/voices are added
     default:
       console.warn(`${logPrefix} No specific voice ID for targetLang: '${targetLang}'. Falling back to default English (Adam Stone).`);

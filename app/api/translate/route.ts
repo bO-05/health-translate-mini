@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { supportedLanguages } from '@/lib/constants'; // Import shared languages
 
 export const runtime = 'edge'; // Specify edge runtime
 
@@ -28,8 +29,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as TranslationRequestBody;
     const { text, targetLang, sourceLang } = body;
 
-    if (!text || !targetLang) {
-      return NextResponse.json({ error: 'Missing text or targetLang' }, { status: 400 });
+    // Validate inputs
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return NextResponse.json({ error: 'Text to translate is required and must be a non-empty string.' }, { status: 400 });
+    }
+    if (!targetLang || typeof targetLang !== 'string') {
+      return NextResponse.json({ error: 'Target language is required.' }, { status: 400 });
+    }
+    if (!sourceLang || typeof sourceLang !== 'string') {
+      return NextResponse.json({ error: 'Source language is required.' }, { status: 400 });
+    }
+
+    // Validate against supported languages
+    const targetLangSupported = supportedLanguages.some(lang => lang.mistralCode === targetLang);
+    const sourceLangSupported = supportedLanguages.some(lang => lang.mistralCode === sourceLang);
+
+    if (!targetLangSupported) {
+      return NextResponse.json({ error: `Target language '${targetLang}' is not supported.` }, { status: 400 });
+    }
+    if (!sourceLangSupported) {
+      return NextResponse.json({ error: `Source language '${sourceLang}' is not supported.` }, { status: 400 });
     }
 
     const normalizedTargetLang = targetLang.toLowerCase().split('-')[0];
