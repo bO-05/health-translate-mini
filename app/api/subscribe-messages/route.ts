@@ -6,7 +6,19 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 export const runtime = 'edge';
 
 // Helper function to call Mistral for translation - placeholder
-// In a real app, this would be a robust call to your translation service/route
+/**
+ * Translates medical text from a source language to a target language using the Mistral API.
+ *
+ * If the Mistral API key is not set, returns the original text prefixed with a notice.
+ * If the translation fails or the API returns an error, returns a string indicating the error.
+ *
+ * @param text - The text to translate.
+ * @param sourceLang - The language code of the original text.
+ * @param targetLang - The language code to translate the text into.
+ * @returns The translated text, or an error message if translation is unavailable.
+ *
+ * @remark This function is specialized for medical text and prioritizes accuracy in medical terminology.
+ */
 async function translateText(text: string, sourceLang: string, targetLang: string): Promise<string> {
   // This is a placeholder. Ideally, you'd call your existing /api/translate route
   // or a shared translation utility function.
@@ -58,6 +70,13 @@ async function translateText(text: string, sourceLang: string, targetLang: strin
 }
 
 
+/**
+ * Handles GET requests to provide a Server-Sent Events (SSE) stream of translated chat messages for a specified room.
+ *
+ * Validates query parameters for room ID, user ID, and language code. Subscribes to a Supabase Realtime channel for new message events in the given room. For each new message not sent by the current user, translates the message text to the user's preferred language if necessary, and streams the result as an SSE event. Maintains a keep-alive mechanism and cleans up resources on disconnect or channel errors.
+ *
+ * @returns A Response object streaming SSE events with translated chat messages and metadata, or a JSON error response for invalid parameters.
+ */
 export async function GET(req: NextRequest) {
   const cookieStore = cookies();
   const supabase = createEdgeClient(cookieStore);

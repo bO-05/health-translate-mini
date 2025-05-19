@@ -4,12 +4,26 @@ import { createEdgeClient } from '@/lib/supabase/server'; // We'll create this u
 
 export const runtime = 'edge';
 
+/**
+ * Generates a random uppercase room code of the specified length.
+ *
+ * @param length - The number of characters in the generated code. Defaults to 6.
+ * @returns A randomly generated uppercase string suitable for use as a room code.
+ */
 function generateRoomCode(length: number = 6): string {
   // Use crypto.randomUUID for better randomness
   return crypto.randomUUID().replace(/-/g, '').slice(0, length).toUpperCase();
 }
 
-// POST /api/room - Create a new room
+/**
+ * Handles POST requests to create a new room with a unique room code.
+ *
+ * Attempts to generate and insert a unique room code into the 'rooms' table, retrying up to five times if a code collision occurs. Returns the newly created room's ID and code on success, or an error response if creation fails.
+ *
+ * @returns A JSON response containing the new room data with status 201, or an error message with status 500 or 503.
+ *
+ * @remark Returns a 503 status if unable to generate a unique room code after five attempts.
+ */
 export async function POST(req: NextRequest) {
   const cookieStore = cookies();
   const supabase = createEdgeClient(cookieStore);
@@ -52,7 +66,13 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(newRoom, { status: 201 });
 }
 
-// GET /api/room?room_code=XYZ - Join an existing room
+/**
+ * Handles GET requests to retrieve a room by its code.
+ *
+ * Expects a `room_code` or `roomCode` query parameter and returns the corresponding room data if found.
+ *
+ * @returns A JSON response containing the room data with status 200, or an error message with status 400, 404, or 500.
+ */
 export async function GET(req: NextRequest) {
   const cookieStore = cookies();
   const supabase = createEdgeClient(cookieStore);
