@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (error) {
-        if (error.code === '23505') { // Unique constraint violation
+        if (error && error.code === '23505') { // Unique constraint violation
           roomCode = generateRoomCode(); // Regenerate code and retry
           attempts++;
           continue;
@@ -62,10 +62,10 @@ export async function GET(req: NextRequest) {
   const cookieStore = cookies();
   const supabase = createEdgeClient(cookieStore);
   const { searchParams } = new URL(req.url);
-  const roomCode = searchParams.get('room_code');
+  const roomCode = searchParams.get('room_code') ?? searchParams.get('roomCode');
 
   if (!roomCode) {
-    return NextResponse.json({ error: 'room_code query parameter is required' }, { status: 400 });
+    return NextResponse.json({ error: 'room_code (or roomCode) query parameter is required' }, { status: 400 });
   }
 
   try {
@@ -75,12 +75,13 @@ export async function GET(req: NextRequest) {
       .eq('room_code', roomCode)
       .single();
 
-    if (error || !room) {
-      if (error && error.code === 'PGRST116') { // "The result contains 0 rows"
-         return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      }
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching room:', error);
-      return NextResponse.json({ error: 'Failed to fetch room', details: error?.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch room', details: error.message }, { status: 500 });
+    }
+
+    if (!room) {
+      return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
     return NextResponse.json(room, { status: 200 });

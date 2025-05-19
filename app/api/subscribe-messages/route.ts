@@ -137,15 +137,16 @@ export async function GET(req: NextRequest) {
           { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${roomId}` },
           handleNewMessage
         )
-        .subscribe((status, err) => {
+        .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             console.log(`Successfully subscribed to Supabase Realtime channel: ${channelName}`);
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error(`Error subscribing to Supabase Realtime channel ${channelName}:`, err);
+            console.error(`Error status for Supabase Realtime channel ${channelName}: ${status}`);
             if (!isControllerClosed) {
-              controller.error(err || new Error('Supabase Realtime channel error'));
+              controller.error(new Error(`Supabase Realtime channel error: ${status}`));
               controller.close();
               isControllerClosed = true;
+              clearInterval(keepAliveInterval);
             }
           } else {
             console.log(`Supabase Realtime status for ${channelName}: ${status}`);

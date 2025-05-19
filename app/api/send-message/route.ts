@@ -25,8 +25,19 @@ export async function POST(req: NextRequest) {
 
   const { roomId, userId, text, lang } = payload;
 
-  if (!roomId || !userId || !text || !lang) {
-    return NextResponse.json({ error: 'Missing required fields: roomId, userId, text, lang' }, { status: 400 });
+  if (!roomId || typeof roomId !== 'string' || roomId.length === 0) {
+    return NextResponse.json({ error: 'Invalid or missing roomId' }, { status: 400 });
+  }
+  // For this prototype, userId is a client-supplied string like "patient" or "provider".
+  // In a production app, userId should be derived from an authenticated session (e.g., supabase.auth.getUser()).
+  if (!userId || typeof userId !== 'string' || userId.length === 0) {
+    return NextResponse.json({ error: 'Invalid or missing userId' }, { status: 400 });
+  }
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    return NextResponse.json({ error: 'Invalid or missing text' }, { status: 400 });
+  }
+  if (!lang || typeof lang !== 'string' || lang.length === 0) { // Basic lang code check, could be more specific (e.g., regex for xx-XX)
+    return NextResponse.json({ error: 'Invalid or missing lang' }, { status: 400 });
   }
 
   try {
